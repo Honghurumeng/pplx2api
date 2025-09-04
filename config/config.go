@@ -141,20 +141,15 @@ func init() {
 		Mutex: sync.Mutex{},
 	}
 	ConfigInstance = LoadConfig()
-	logger.Info("Loaded config:")
-	logger.Info(fmt.Sprintf("Sessions count: %d", ConfigInstance.RetryCount))
-	for _, session := range ConfigInstance.Sessions {
-		logger.Info(fmt.Sprintf("Session: %s", session.SessionKey))
-	}
-	logger.Info(fmt.Sprintf("Address: %s", ConfigInstance.Address))
-	logger.Info(fmt.Sprintf("APIKey: %s", ConfigInstance.APIKey))
-	logger.Info(fmt.Sprintf("Proxy: %s", ConfigInstance.Proxy))
-	logger.Info(fmt.Sprintf("IsIncognito: %t", ConfigInstance.IsIncognito))
-	logger.Info(fmt.Sprintf("MaxChatHistoryLength: %d", ConfigInstance.MaxChatHistoryLength))
-	logger.Info(fmt.Sprintf("NoRolePrefix: %t", ConfigInstance.NoRolePrefix))
-	logger.Info(fmt.Sprintf("SearchResultCompatible: %t", ConfigInstance.SearchResultCompatible))
-	logger.Info(fmt.Sprintf("PromptForFile: %s", ConfigInstance.PromptForFile))
-	logger.Info(fmt.Sprintf("IgnoreSerchResult: %t", ConfigInstance.IgnoreSerchResult))
-	logger.Info(fmt.Sprintf("IgnoreModelMonitoring: %t", ConfigInstance.IgnoreModelMonitoring))
-	logger.Info(fmt.Sprintf("IsMaxSubscribe: %t", ConfigInstance.IsMaxSubscribe))
+    logger.Info("Loaded config:")
+    logger.Info(fmt.Sprintf("Sessions count: %d", ConfigInstance.RetryCount))
+    // Avoid logging session tokens, API keys, or prompts
+    logger.Info(fmt.Sprintf("Address: %s", ConfigInstance.Address))
+    logger.Info(fmt.Sprintf("IsIncognito: %t", ConfigInstance.IsIncognito))
+    logger.Info(fmt.Sprintf("MaxChatHistoryLength: %d", ConfigInstance.MaxChatHistoryLength))
+    logger.Info(fmt.Sprintf("NoRolePrefix: %t", ConfigInstance.NoRolePrefix))
+    logger.Info(fmt.Sprintf("SearchResultCompatible: %t", ConfigInstance.SearchResultCompatible))
+    logger.Info(fmt.Sprintf("IgnoreSerchResult: %t", ConfigInstance.IgnoreSerchResult))
+    logger.Info(fmt.Sprintf("IgnoreModelMonitoring: %t", ConfigInstance.IgnoreModelMonitoring))
+    logger.Info(fmt.Sprintf("IsMaxSubscribe: %t", ConfigInstance.IsMaxSubscribe))
 }

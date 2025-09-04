@@ -1,31 +1,39 @@
 package middleware
 
 import (
-	"pplx2api/config"
-	"strings"
+    "crypto/subtle"
+    "pplx2api/config"
+    "strings"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware initializes the Claude client from the request header
+// AuthMiddleware validates Authorization header using constant-time compare
 func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		Key := c.GetHeader("Authorization")
-		if Key != "" {
-			Key = strings.TrimPrefix(Key, "Bearer ")
-			if Key != config.ConfigInstance.APIKey {
-				c.JSON(401, gin.H{
-					"error": "Invalid API key",
-				})
-				c.Abort()
-				return
-			}
-			c.Next()
-			return
-		}
-		c.JSON(401, gin.H{
-			"error": "Missing or invalid Authorization header",
-		})
-		c.Abort()
-	}
+    return func(c *gin.Context) {
+        if config.ConfigInstance.APIKey == "" {
+            c.JSON(500, gin.H{
+                "error": "API key not configured",
+            })
+            c.Abort()
+            return
+        }
+        token := c.GetHeader("Authorization")
+        if token == "" {
+            c.JSON(401, gin.H{
+                "error": "Missing Authorization header",
+            })
+            c.Abort()
+            return
+        }
+        token = strings.TrimPrefix(token, "Bearer ")
+        if subtle.ConstantTimeCompare([]byte(token), []byte(config.ConfigInstance.APIKey)) != 1 {
+            c.JSON(401, gin.H{
+                "error": "Invalid API key",
+            })
+            c.Abort()
+            return
+        }
+        c.Next()
+    }
 }

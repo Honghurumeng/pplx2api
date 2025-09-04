@@ -205,7 +205,7 @@ func (c *Client) SendMessage(message string, stream bool, is_incognito bool, gc 
 		requestBody.Params.SearchFocus = "internet"
 		requestBody.Params.Sources = append(requestBody.Params.Sources, "web")
 	}
-	logger.Info(fmt.Sprintf("Perplexity request body: %v", requestBody))
+    // Do not log full request body to avoid leaking prompts
 	// Make the request
 	resp, err := c.client.R().DisableAutoReadResponse().
 		SetBody(requestBody).
@@ -223,11 +223,12 @@ func (c *Client) SendMessage(message string, stream bool, is_incognito bool, gc 
 		return http.StatusTooManyRequests, fmt.Errorf("rate limit exceeded")
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		logger.Error(fmt.Sprintf("Unexpected return data: %s", resp.String()))
-		resp.Body.Close()
-		return resp.StatusCode, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
+    if resp.StatusCode != http.StatusOK {
+        // Avoid logging raw response body as it may include user data
+        logger.Error(fmt.Sprintf("Unexpected status code from upstream: %d", resp.StatusCode))
+        resp.Body.Close()
+        return resp.StatusCode, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+    }
 
 	return 200, c.HandleResponse(resp.Body, stream, gc)
 }
@@ -424,16 +425,18 @@ func (c *Client) createUploadURL(filename string, contentType string) (*UploadUR
 	resp, err := c.client.R().
 		SetBody(requestBody).
 		Post("https://www.perplexity.ai/rest/uploads/create_upload_url?version=2.18&source=default")
-	if err != nil {
-		logger.Error(fmt.Sprintf("Error creating upload URL: %v", err))
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		logger.Error(fmt.Sprintf("Image Upload with status code %d: %s", resp.StatusCode, resp.String()))
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
+    if err != nil {
+        logger.Error(fmt.Sprintf("Error creating upload URL: %v", err))
+        return nil, err
+    }
+    if resp.StatusCode != http.StatusOK {
+        // Do not log response body since it can include signed fields
+        logger.Error(fmt.Sprintf("Create upload URL non-200: %d", resp.StatusCode))
+        return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+    }
 	var uploadURLResponse UploadURLResponse
-	logger.Info(fmt.Sprintf("Create upload with status code %d: %s", resp.StatusCode, resp.String()))
+    // Do not log full response body which contains temporary credentials
+    logger.Info(fmt.Sprintf("Create upload URL success: %d", resp.StatusCode))
 	if err := json.Unmarshal(resp.Bytes(), &uploadURLResponse); err != nil {
 		logger.Error(fmt.Sprintf("Error unmarshalling upload URL response: %v", err))
 		return nil, err
@@ -447,7 +450,7 @@ func (c *Client) createUploadURL(filename string, contentType string) (*UploadUR
 }
 
 func (c *Client) UploadImage(img_list []string) error {
-	logger.Info(fmt.Sprintf("Uploading %d images to Cloudinary", len(img_list)))
+    logger.Info(fmt.Sprintf("Uploading %d images", len(img_list)))
 
 	// Upload images to Cloudinary
 	for _, img := range img_list {
@@ -458,7 +461,7 @@ func (c *Client) UploadImage(img_list []string) error {
 			logger.Error(fmt.Sprintf("Error creating upload URL: %v", err))
 			return err
 		}
-		logger.Info(fmt.Sprintf("Upload URL response: %v", uploadURLResponse))
+        // Do not log upload URL response (contains credentials)
 		// Upload image to Cloudinary
 		err = c.UloadFileToCloudinary(uploadURLResponse.Fields, "img", img, filename)
 		if err != nil {
@@ -471,11 +474,9 @@ func (c *Client) UploadImage(img_list []string) error {
 
 func (c *Client) UloadFileToCloudinary(uploadInfo CloudinaryUploadInfo, contentType string, filedata string, filename string) error {
 	// 更新为 AWS S3 上传
-	if len(filedata) > 100 {
-		logger.Info(fmt.Sprintf("filedata: %s ……", filedata[:50]))
-	}
+    // Never log file contents
 	// Add form fields
-	logger.Info(fmt.Sprintf("Uploading file %s to Cloudinary", filename))
+    logger.Info(fmt.Sprintf("Uploading file %s", filename))
 	var formFields map[string]string
 	if contentType == "img" {
 		formFields = map[string]string{
@@ -558,11 +559,12 @@ func (c *Client) UloadFileToCloudinary(uploadInfo CloudinaryUploadInfo, contentT
 		SetBodyBytes(requestBody.Bytes()).
 		Post(uploadURL)
 
-	if err != nil {
-		logger.Error(fmt.Sprintf("Error uploading file: %v", err))
-		return err
-	}
-	logger.Info(fmt.Sprintf("Image Upload with status code %d: %s", resp.StatusCode, resp.String()))
+    if err != nil {
+        logger.Error(fmt.Sprintf("Error uploading file: %v", err))
+        return err
+    }
+    // Avoid logging full response body
+    logger.Info(fmt.Sprintf("Upload finished with status %d", resp.StatusCode))
 	// if contentType == "img" {
 	// 	var uploadResponse map[string]interface{}
 	// 	if err := json.Unmarshal(resp.Bytes(), &uploadResponse); err != nil {
@@ -579,7 +581,7 @@ func (c *Client) UloadFileToCloudinary(uploadInfo CloudinaryUploadInfo, contentT
 
 // SetBigContext is a placeholder for setting context
 func (c *Client) UploadText(context string) error {
-	logger.Info("Uploading txt to AWS")
+    logger.Info("Uploading txt context")
 	filedata := base64.StdEncoding.EncodeToString([]byte(context))
 	filename := utils.RandomString(5) + ".txt"
 	// Upload images to Cloudinary
@@ -588,7 +590,7 @@ func (c *Client) UploadText(context string) error {
 		logger.Error(fmt.Sprintf("Error creating upload URL: %v", err))
 		return err
 	}
-	logger.Info(fmt.Sprintf("Upload URL response: %v", uploadURLResponse))
+    // Do not log upload URL response (contains credentials)
 	// Upload txt to Cloudinary
 	err = c.UloadFileToCloudinary(uploadURLResponse.Fields, "txt", filedata, filename)
 	if err != nil {
@@ -605,10 +607,10 @@ func (c *Client) GetNewCookie() (string, error) {
 		logger.Error(fmt.Sprintf("Error getting session cookie: %v", err))
 		return "", err
 	}
-	if resp.StatusCode != http.StatusOK {
-		logger.Error(fmt.Sprintf("Error getting session cookie: %s", resp.String()))
-		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
+    if resp.StatusCode != http.StatusOK {
+        logger.Error(fmt.Sprintf("Error getting session cookie, status: %d", resp.StatusCode))
+        return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+    }
 	for _, cookie := range resp.Cookies() {
 		if cookie.Name == "__Secure-next-auth.session-token" {
 			return cookie.Value, nil

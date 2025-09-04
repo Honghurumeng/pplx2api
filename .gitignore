@@ -1,0 +1,25 @@
+# Local environment
+.env
+.env.*
+
+# Sessions (sensitive)
+sessions.json
+
+# Build artifacts
+bin/
+build/
+dist/
+*.out
+*.exe
+*.dll
+*.so
+
+# Logs and coverage
+*.log
+coverage*
+coverage/
+
+# IDE/editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,20 +1,23 @@
 package main
 
 import (
-	"pplx2api/config"
-	"pplx2api/job"
-	"pplx2api/router"
-	"time"
+    "pplx2api/config"
+    "pplx2api/job"
+    "pplx2api/middleware"
+    "pplx2api/router"
+    "time"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
 func main() {
-	r := gin.Default()
-	// Load configuration
+    r := gin.Default()
+    // Load configuration
 
-	// Setup all routes
-	router.SetupRoutes(r)
+    // Setup all routes
+    // Limit request body size to 1MB to reduce DoS surface
+    r.Use(middleware.BodyLimit(1 << 20))
+    router.SetupRoutes(r)
 	// 创建会话更新器，设置更新间隔为24小时
 	sessionUpdater := job.GetSessionUpdater(24 * time.Hour)
 

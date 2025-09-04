@@ -90,9 +90,7 @@ func ChatCompletionsHandler(c *gin.Context) {
 						} else if itemType == "image_url" {
 							if imageUrl, ok := itemMap["image_url"].(map[string]interface{}); ok {
 								if url, ok := imageUrl["url"].(string); ok {
-									if len(url) > 50 {
-										logger.Info(fmt.Sprintf("Image URL: %s ……", url[:50]))
-									}
+                    // Avoid logging image URLs or base64 data
 									if strings.HasPrefix(url, "data:image/") {
 										// 保留 base64 编码的图片数据
 										url = strings.Split(url, ",")[1]
@@ -106,8 +104,7 @@ func ChatCompletionsHandler(c *gin.Context) {
 			}
 		}
 	}
-	fmt.Println(prompt.String())                             // 输出最终构造的内容
-	fmt.Println("img_data_list_length:", len(img_data_list)) // 输出图片数据列表长度
+    // Remove debug prints to prevent leaking user prompts and metadata
 	var rootPrompt strings.Builder
 	rootPrompt.WriteString(prompt.String())
 	// 切号重试机制
@@ -120,7 +117,8 @@ func ChatCompletionsHandler(c *gin.Context) {
 		}
 		index = (index + 1) % len(config.ConfigInstance.Sessions)
 		session, err := config.ConfigInstance.GetSessionForModel(index)
-		logger.Info(fmt.Sprintf("Using session for model %s: %s", model, session.SessionKey))
+        // Do not log session tokens
+        logger.Info(fmt.Sprintf("Using session for model %s", model))
 		if err != nil {
 			logger.Error(fmt.Sprintf("Failed to get session for model %s: %v", model, err))
 			logger.Info("Retrying another session")

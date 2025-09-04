@@ -105,7 +105,8 @@ func (su *SessionUpdater) saveSessionsToFile() error {
 	}
 
 	// Write to file
-	err = ioutil.WriteFile(su.configPath, data, 0644)
+    // Restrict permissions to owner only
+    err = ioutil.WriteFile(su.configPath, data, 0600)
 	if err != nil {
 		return err
 	}
